@@ -1,8 +1,8 @@
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
-  apiKey: 'sk-placeholder-key', // Replace with actual API key
-  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'sk-placeholder-key',
+  baseURL: import.meta.env.VITE_OPENAI_BASE_URL || "https://openrouter.ai/api/v1",
   dangerouslyAllowBrowser: true,
 })
 
@@ -86,30 +86,44 @@ export const openaiService = {
     }
   },
 
-  async generateInsights(workouts) {
+  async generateInsights(workouts, subscriptionTier = 'free') {
     if (!workouts || workouts.length === 0) {
       return "Start logging workouts to get personalized AI insights!"
     }
 
     try {
       const workoutSummary = workouts.slice(0, 10).map(w => 
-        `${w.exerciseType}: ${JSON.stringify(w.metrics)}`
+        `${w.exerciseType}: ${JSON.stringify(w.metrics)} (${new Date(w.startTime).toLocaleDateString()})`
       ).join('\n')
+
+      const systemPrompt = subscriptionTier === 'advanced' 
+        ? `You are an expert fitness coach AI with advanced analytics capabilities. Provide detailed, personalized insights with specific recommendations, form tips, and progressive training plans.
+
+        Advanced Analysis Features:
+        - Detailed progress tracking and trend analysis
+        - Specific form and technique recommendations
+        - Periodization and training cycle suggestions
+        - Injury prevention advice
+        - Nutrition timing recommendations
+        - Recovery optimization strategies
+        
+        Provide comprehensive, actionable insights with specific metrics and targets.`
+        : `You are a fitness coach AI. Analyze workout data and provide encouraging, actionable insights.
+        
+        Focus on:
+        - Progress trends
+        - Areas for improvement
+        - Motivation and encouragement
+        - Specific recommendations
+        
+        Keep it concise, positive, and actionable.`
 
       const response = await openai.chat.completions.create({
         model: 'google/gemini-2.0-flash-001',
         messages: [
           {
             role: 'system',
-            content: `You are a fitness coach AI. Analyze workout data and provide encouraging, actionable insights.
-            
-            Focus on:
-            - Progress trends
-            - Areas for improvement
-            - Motivation and encouragement
-            - Specific recommendations
-            
-            Keep it concise, positive, and actionable.`
+            content: systemPrompt
           },
           {
             role: 'user',
@@ -117,13 +131,183 @@ export const openaiService = {
           }
         ],
         temperature: 0.7,
-        max_tokens: 300
+        max_tokens: subscriptionTier === 'advanced' ? 500 : 300
       })
 
       return response.choices[0].message.content
     } catch (error) {
       console.error('Error generating insights:', error)
       return "Great job staying consistent with your workouts! Keep up the momentum and focus on progressive overload to see continued improvements."
+    }
+  },
+
+  async generateWorkoutPlan(userGoals, fitnessLevel, availableTime, subscriptionTier = 'free') {
+    if (subscriptionTier === 'free') {
+      return "Upgrade to Core or Advanced plan to get personalized AI workout plans!"
+    }
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional fitness trainer AI. Create personalized workout plans based on user goals, fitness level, and available time.
+
+            Provide structured workout plans with:
+            - Specific exercises with sets, reps, and rest periods
+            - Progressive overload recommendations
+            - Warm-up and cool-down routines
+            - Modification options for different fitness levels
+            - Safety considerations and form tips
+
+            Format as a structured plan with clear sections.`
+          },
+          {
+            role: 'user',
+            content: `Create a workout plan for:
+            Goals: ${userGoals}
+            Fitness Level: ${fitnessLevel}
+            Available Time: ${availableTime} minutes per session
+            Subscription: ${subscriptionTier}`
+          }
+        ],
+        temperature: 0.6,
+        max_tokens: subscriptionTier === 'advanced' ? 800 : 500
+      })
+
+      return response.choices[0].message.content
+    } catch (error) {
+      console.error('Error generating workout plan:', error)
+      return "Unable to generate workout plan at this time. Please try again later."
+    }
+  },
+
+  async analyzeFormFeedback(exerciseType, userDescription, subscriptionTier = 'free') {
+    if (subscriptionTier !== 'advanced') {
+      return "Upgrade to Advanced plan to get AI form analysis and feedback!"
+    }
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a certified personal trainer AI specializing in exercise form analysis. Provide detailed form feedback and corrections based on user descriptions.
+
+            Focus on:
+            - Common form mistakes for the exercise
+            - Specific corrections and cues
+            - Safety considerations
+            - Progressive improvements
+            - Injury prevention tips
+
+            Be encouraging but precise with technical feedback.`
+          },
+          {
+            role: 'user',
+            content: `Analyze form for ${exerciseType}. User description: "${userDescription}"`
+          }
+        ],
+        temperature: 0.4,
+        max_tokens: 400
+      })
+
+      return response.choices[0].message.content
+    } catch (error) {
+      console.error('Error analyzing form feedback:', error)
+      return "Unable to analyze form at this time. Please try again later."
+    }
+  },
+
+  async generateNutritionAdvice(workouts, userGoals, subscriptionTier = 'free') {
+    if (subscriptionTier !== 'advanced') {
+      return "Upgrade to Advanced plan to get personalized nutrition advice!"
+    }
+
+    try {
+      const workoutTypes = workouts.slice(0, 5).map(w => w.exerciseType).join(', ')
+      
+      const response = await openai.chat.completions.create({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a sports nutritionist AI. Provide personalized nutrition advice based on workout patterns and fitness goals.
+
+            Focus on:
+            - Pre and post-workout nutrition
+            - Macronutrient timing
+            - Hydration strategies
+            - Recovery nutrition
+            - Supplement recommendations (if appropriate)
+
+            Keep advice practical and evidence-based.`
+          },
+          {
+            role: 'user',
+            content: `Provide nutrition advice for someone doing: ${workoutTypes}. Goals: ${userGoals}`
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 400
+      })
+
+      return response.choices[0].message.content
+    } catch (error) {
+      console.error('Error generating nutrition advice:', error)
+      return "Unable to generate nutrition advice at this time. Please try again later."
+    }
+  },
+
+  async predictPerformance(workouts, targetExercise, subscriptionTier = 'free') {
+    if (subscriptionTier !== 'advanced') {
+      return "Upgrade to Advanced plan to get AI performance predictions!"
+    }
+
+    try {
+      const relevantWorkouts = workouts
+        .filter(w => w.exerciseType.toLowerCase().includes(targetExercise.toLowerCase()))
+        .slice(0, 10)
+
+      if (relevantWorkouts.length < 3) {
+        return "Need more workout data for accurate performance predictions. Keep logging your workouts!"
+      }
+
+      const workoutData = relevantWorkouts.map(w => 
+        `${w.exerciseType}: ${JSON.stringify(w.metrics)} (${new Date(w.startTime).toLocaleDateString()})`
+      ).join('\n')
+
+      const response = await openai.chat.completions.create({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a sports performance analyst AI. Analyze workout progression data and predict future performance capabilities.
+
+            Provide:
+            - Performance trend analysis
+            - Realistic short-term goals (1-4 weeks)
+            - Medium-term projections (1-3 months)
+            - Factors that could affect performance
+            - Specific metrics to track
+
+            Base predictions on actual data trends and be realistic.`
+          },
+          {
+            role: 'user',
+            content: `Analyze performance trends and predict future capabilities for ${targetExercise}:\n\n${workoutData}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 400
+      })
+
+      return response.choices[0].message.content
+    } catch (error) {
+      console.error('Error predicting performance:', error)
+      return "Unable to generate performance predictions at this time. Please try again later."
     }
   }
 }

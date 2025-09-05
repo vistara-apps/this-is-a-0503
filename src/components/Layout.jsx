@@ -7,7 +7,9 @@ import {
   Crown, 
   Menu, 
   X,
-  Activity
+  Activity,
+  Brain,
+  Eye
 } from 'lucide-react'
 
 const Layout = ({ children }) => {
@@ -18,6 +20,8 @@ const Layout = ({ children }) => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Log Workout', href: '/log', icon: PlusCircle },
     { name: 'Progress', href: '/progress', icon: TrendingUp },
+    { name: 'AI Planner', href: '/planner', icon: Brain },
+    { name: 'Form Analysis', href: '/form-analysis', icon: Eye },
     { name: 'Subscription', href: '/subscription', icon: Crown },
   ]
 
