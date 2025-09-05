@@ -5,8 +5,8 @@ import { Crown, Check, Zap, TrendingUp, Brain, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const Subscription = () => {
-  const { subscriptionTier, setSubscriptionTier } = useAppContext()
-  const [loading, setLoading] = useState(false)
+  const { subscriptionTier, upgradeSubscription, cancelSubscription, loading } = useAppContext()
+  const [localLoading, setLocalLoading] = useState(false)
 
   const plans = [
     {
@@ -62,18 +62,20 @@ const Subscription = () => {
   ]
 
   const handleUpgrade = async (planId) => {
-    setLoading(true)
-    
     try {
-      // Simulate payment process
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      setSubscriptionTier(planId)
-      toast.success(`Successfully upgraded to ${plans.find(p => p.id === planId)?.name} plan!`)
+      await upgradeSubscription(planId)
     } catch (error) {
-      toast.error('Payment failed. Please try again.')
-    } finally {
-      setLoading(false)
+      // Error handling is done in the context
+    }
+  }
+
+  const handleCancel = async () => {
+    if (window.confirm('Are you sure you want to cancel your subscription? You will lose access to premium features.')) {
+      try {
+        await cancelSubscription()
+      } catch (error) {
+        // Error handling is done in the context
+      }
     }
   }
 
@@ -173,6 +175,25 @@ const Subscription = () => {
           )
         })}
       </div>
+
+      {/* Cancel Subscription */}
+      {subscriptionTier !== 'free' && (
+        <DashboardCard className="animate-slide-up border-red-200" style={{ animationDelay: '350ms' }}>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-text mb-2">Manage Subscription</h3>
+            <p className="text-muted mb-4">
+              Need to make changes to your subscription? You can cancel anytime.
+            </p>
+            <button
+              onClick={handleCancel}
+              disabled={loading}
+              className="px-6 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Processing...' : 'Cancel Subscription'}
+            </button>
+          </div>
+        </DashboardCard>
+      )}
 
       {/* Feature Comparison */}
       <DashboardCard className="animate-slide-up" style={{ animationDelay: '400ms' }}>
