@@ -1,6 +1,6 @@
 import React from 'react'
 import { format } from 'date-fns'
-import { Clock, Target, Weight, MapPin } from 'lucide-react'
+import { Clock, Target, Dumbbell, MapPin } from 'lucide-react'
 
 const WorkoutLogEntry = ({ workout, variant = 'simple' }) => {
   const formatMetrics = (metrics) => {
@@ -64,7 +64,7 @@ const WorkoutLogEntry = ({ workout, variant = 'simple' }) => {
         
         {workout.metrics.weight && (
           <div className="flex items-center">
-            <Weight className="h-4 w-4 text-primary mr-2" />
+            <Dumbbell className="h-4 w-4 text-primary mr-2" />
             <div>
               <p className="text-xs text-muted">Weight</p>
               <p className="font-medium">{workout.metrics.weight}lbs</p>
